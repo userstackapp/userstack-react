@@ -4,7 +4,6 @@
   "description": "React client library for Userstack",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "private": "false",
   "scripts": {
     "build": "tsc && babel ./src --out-dir dist --extensions \".ts,.tsx\" --copy-files"
   },

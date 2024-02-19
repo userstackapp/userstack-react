@@ -10,6 +10,7 @@ interface UserstackProviderProps {
 
 type UserstackContextType = {
   identify: (credential: string, data: any) => void;
+  forget: () => void;
   sessionId: string;
   flags: string[];
   currentPlan: string;
@@ -17,6 +18,7 @@ type UserstackContextType = {
 
 const UserstackContext = createContext<UserstackContextType>({
   identify: async (credential: string, data: any) => {},
+  forget: () => {},
   sessionId: "",
   flags: [],
   currentPlan: "none",
@@ -59,6 +61,12 @@ export function UserstackProvider({ children, appId }: UserstackProviderProps) {
       } else {
         console.error("Failed to identify user");
       }
+    },
+    forget: () => {
+      Cookies.remove(`_us_session`);
+      setSessionId("");
+      setCurrentPlan("none");
+      setFlags([]);
     },
     sessionId,
     flags,
