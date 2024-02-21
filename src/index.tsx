@@ -50,6 +50,7 @@ export function UserstackProvider({ children, appId }: UserstackProviderProps) {
           time: new Date().getTime(),
           ...sessionData,
         };
+        console.log("Userstack user identified:", cookie);
         Cookies.set(`_us_session`, JSON.stringify(cookie), {
           expires: 36500, // 100 years should be enough
         });
