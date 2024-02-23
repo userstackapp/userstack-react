@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
 
-const API_URL = "https://userstack.app/api/alpha";
+const API_URL = "https://api.userstack.app/alpha";
 const DATA_TTL = 120000; // 2 minutes
 
 interface UserstackProviderProps {
@@ -9,8 +9,14 @@ interface UserstackProviderProps {
   appId: string;
 }
 
+interface IdentifyConfig {
+  ttl?: number;
+  data?: any;
+  domainId?: string;
+}
+
 type UserstackContextType = {
-  identify: (credential: string, data: any) => void;
+  identify: (credential: string, config: any) => void;
   forget: () => void;
   sessionId: string;
   flags: string[];
@@ -18,7 +24,7 @@ type UserstackContextType = {
 };
 
 const UserstackContext = createContext<UserstackContextType>({
-  identify: async (credential: string, data: any) => {},
+  identify: async (credential: string, config: IdentifyConfig) => {},
   forget: () => {},
   sessionId: "",
   flags: [],
@@ -31,7 +37,7 @@ export function UserstackProvider({ children, appId }: UserstackProviderProps) {
   const [flags, setFlags] = useState([]);
 
   const values = {
-    identify: async (credential: string, { data }: { data: any }) => {
+    identify: async (credential: string, config: IdentifyConfig) => {
       const response = await fetch(`${API_URL}/identify`, {
         method: "POST",
         headers: {
@@ -40,7 +46,7 @@ export function UserstackProvider({ children, appId }: UserstackProviderProps) {
         },
         body: JSON.stringify({
           credential,
-          data,
+          config,
         }),
       });
 
@@ -52,7 +58,7 @@ export function UserstackProvider({ children, appId }: UserstackProviderProps) {
         };
         console.log("Userstack user identified:", cookie);
         Cookies.set(`_us_session`, JSON.stringify(cookie), {
-          expires: 36500, // 100 years should be enough
+          expires: config.ttl ? config.ttl / 60 / 24 : 36500, // default 100 years ie. forever
         });
       } else {
         console.error("Failed to identify user");
