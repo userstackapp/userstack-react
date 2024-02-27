@@ -11,119 +11,183 @@ interface UserstackProviderProps {
 
 interface IdentifyConfig {
   ttl?: number;
-  data?: any;
   domainId?: string;
 }
 
+interface SessionData {
+  sessionId: string;
+  plan: string;
+  flags: string[];
+  time: number;
+}
+
 type UserstackContextType = {
-  identify: (credential: string, config: any) => void;
+  identify: (credential: string, config: IdentifyConfig) => Promise<void>;
   forget: () => void;
   sessionId: string;
   flags: string[];
   currentPlan: string;
+  upgrade: (
+    planId: string,
+    successUrl: string,
+    cancelUrl: string
+  ) => Promise<void>;
 };
 
-const UserstackContext = createContext<UserstackContextType>({
-  identify: async (credential: string, config: IdentifyConfig) => {},
-  forget: () => {},
-  sessionId: "",
-  flags: [],
-  currentPlan: "none",
-});
+const UserstackContext = createContext<UserstackContextType>(
+  {} as UserstackContextType
+);
 
-export function UserstackProvider({ children, appId }: UserstackProviderProps) {
-  const [sessionId, setSessionId] = useState("");
-  const [currentPlan, setCurrentPlan] = useState("none");
-  const [flags, setFlags] = useState([]);
+const calculateCookieExpiry = (ttl: number = 36500) => {
+  // Convert TTL to days for cookie expiration
+  return ttl / 60 / 24;
+};
 
-  const values = {
-    identify: async (credential: string, config: IdentifyConfig) => {
-      const response = await fetch(`${API_URL}/identify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Userstack-App-Id": appId,
-        },
-        body: JSON.stringify({
-          credential,
-          config,
-        }),
+export const UserstackProvider: React.FC<UserstackProviderProps> = ({
+  children,
+  appId,
+}) => {
+  const [sessionId, setSessionId] = useState<string>("");
+  const [currentPlan, setCurrentPlan] = useState<string>("none");
+  const [flags, setFlags] = useState<string[]>([]);
+
+  const identify = async (
+    credential: string,
+    config: IdentifyConfig
+  ): Promise<void> => {
+    const response = await fetch(`${API_URL}/identify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Userstack-App-Id": appId,
+      },
+      body: JSON.stringify({
+        credential,
+        config,
+      }),
+    });
+
+    if (response.ok) {
+      const sessionData: SessionData = await response.json();
+      const cookie = {
+        ...sessionData,
+        time: Date.now(),
+      };
+      console.log("Userstack user identified:", cookie);
+      Cookies.set("_us_session", JSON.stringify(cookie), {
+        expires: calculateCookieExpiry(config.ttl),
       });
+    } else {
+      console.error("Failed to identify user");
+    }
+  };
 
-      if (response.ok) {
-        const sessionData = await response.json();
-        const cookie = {
-          time: new Date().getTime(),
-          ...sessionData,
-        };
-        console.log("Userstack user identified:", cookie);
-        Cookies.set(`_us_session`, JSON.stringify(cookie), {
-          expires: config.ttl ? config.ttl / 60 / 24 : 36500, // default 100 years ie. forever
-        });
-      } else {
-        console.error("Failed to identify user");
-      }
-    },
-    refresh: async (sessionId: string) => {
-      const response = await fetch(`${API_URL}/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Userstack-App-Id": appId,
-        },
-        body: JSON.stringify({
-          sessionId,
-        }),
+  const refresh = async (sessionId: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Userstack-App-Id": appId,
+      },
+      body: JSON.stringify({
+        sessionId,
+      }),
+    });
+
+    if (response.ok) {
+      const sessionData = await response.json();
+      const cookie = {
+        time: new Date().getTime(),
+        ...sessionData,
+      };
+      Cookies.set(`_us_session`, JSON.stringify(cookie), {
+        expires: 36500, // 100 years should be enough
       });
+    } else {
+      console.error("Failed to identify user");
+    }
+  };
 
-      if (response.ok) {
-        const sessionData = await response.json();
-        const cookie = {
-          time: new Date().getTime(),
-          ...sessionData,
-        };
-        Cookies.set(`_us_session`, JSON.stringify(cookie), {
-          expires: 36500, // 100 years should be enough
-        });
-      } else {
-        console.error("Failed to identify user");
+  const forget = (): void => {
+    Cookies.remove("_us_session");
+    setSessionId("");
+    setCurrentPlan("none");
+    setFlags([]);
+  };
+
+  const upgrade = async (
+    planId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<void> => {
+    console.log(sessionId, planId);
+
+    if (!sessionId || sessionId === "") {
+      console.error("Userstack error: No session ID found");
+      return;
+    }
+
+    if (!planId || planId === "") {
+      console.error("Userstack error: No plan ID provided");
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/upgrade`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Userstack-App-Id": appId,
+      },
+      body: JSON.stringify({
+        sessionId,
+        planId,
+        successUrl,
+        cancelUrl,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const redirectUrl = data.redirectUrl;
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
       }
-    },
-    forget: () => {
-      Cookies.remove(`_us_session`);
-      setSessionId("");
-      setCurrentPlan("none");
-      setFlags([]);
-    },
-    sessionId,
-    flags,
-    currentPlan,
+    } else {
+      console.error("Failed to upgrade user:", await response.text());
+    }
   };
 
   useEffect(() => {
-    const now = new Date().getTime();
-    const session = Cookies.get(`_us_session`);
-
+    const session = Cookies.get("_us_session");
     if (session) {
-      const sessionData = JSON.parse(session);
+      const sessionData: SessionData = JSON.parse(session);
+      const now = Date.now();
       if (sessionData.time + DATA_TTL > now) {
         setSessionId(sessionData.sessionId);
         setCurrentPlan(sessionData.plan);
         setFlags(sessionData.flags);
       } else {
-        // We passed the TTL, so we should refresh the session
-        values.refresh(sessionData.sessionId);
+        refresh(sessionData.sessionId).catch(console.error);
       }
     }
   }, []);
 
   return (
-    <UserstackContext.Provider value={values}>
+    <UserstackContext.Provider
+      value={{ identify, forget, sessionId, flags, currentPlan, upgrade }}
+    >
       {children}
     </UserstackContext.Provider>
   );
-}
+};
 
-export default function useUserstack() {
-  return useContext(UserstackContext);
-}
+export const useUserstack = (): UserstackContextType => {
+  const context = useContext(UserstackContext);
+  if (context === undefined) {
+    throw new Error("useUserstack must be used within a UserstackProvider");
+  }
+  return context;
+};
+
+export default useUserstack;
