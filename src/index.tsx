@@ -11,7 +11,9 @@ interface UserstackProviderProps {
 
 interface IdentifyConfig {
   ttl?: number;
-  domainId?: string;
+  groupId?: string;
+  groupName?: string;
+  data?: any;
 }
 
 interface SessionData {
