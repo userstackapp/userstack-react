@@ -19,7 +19,7 @@ interface IdentifyConfig {
 interface SessionData {
   sessionId: string;
   plan: string;
-  flags: string[];
+  flags: { [key: string]: boolean | string | number };
   time: number;
 }
 
@@ -27,13 +27,14 @@ type UserstackContextType = {
   identify: (credential: string, config: IdentifyConfig) => Promise<void>;
   forget: () => void;
   sessionId: string;
-  flags: string[];
+  flags: { [key: string]: boolean | string | number };
   currentPlan: string;
   upgrade: (
     planId: string,
     successUrl: string,
     cancelUrl: string
   ) => Promise<void>;
+  setIdGroup: (groupId: string) => Promise<void>;
 };
 
 const UserstackContext = createContext<UserstackContextType>(
@@ -51,7 +52,9 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
 }) => {
   const [sessionId, setSessionId] = useState<string>("");
   const [currentPlan, setCurrentPlan] = useState<string>("none");
-  const [flags, setFlags] = useState<string[]>([]);
+  const [flags, setFlags] = useState<{
+    [key: string]: boolean | string | number;
+  }>({});
 
   const identify = async (
     credential: string,
@@ -102,6 +105,7 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
         time: new Date().getTime(),
         ...sessionData,
       };
+      console.log("Userstack session refreshed:", cookie);
       Cookies.set(`_us_session`, JSON.stringify(cookie), {
         expires: 36500, // 100 years should be enough
       });
@@ -114,7 +118,7 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
     Cookies.remove("_us_session");
     setSessionId("");
     setCurrentPlan("none");
-    setFlags([]);
+    setFlags({});
   };
 
   const upgrade = async (
@@ -160,6 +164,34 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
     }
   };
 
+  const setIdGroup = async (groupId: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/setgroup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Userstack-App-Id": appId,
+      },
+      body: JSON.stringify({
+        sessionId,
+        groupId,
+      }),
+    });
+
+    if (response.ok) {
+      const sessionData = await response.json();
+      const cookie = {
+        time: new Date().getTime(),
+        ...sessionData,
+      };
+      console.log("Userstack group changed:", cookie);
+      Cookies.set(`_us_session`, JSON.stringify(cookie), {
+        expires: 36500, // 100 years should be enough
+      });
+    } else {
+      console.error("Failed to set new group ID");
+    }
+  };
+
   useEffect(() => {
     const session = Cookies.get("_us_session");
     if (session) {
@@ -177,7 +209,15 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
 
   return (
     <UserstackContext.Provider
-      value={{ identify, forget, sessionId, flags, currentPlan, upgrade }}
+      value={{
+        identify,
+        forget,
+        sessionId,
+        flags,
+        currentPlan,
+        upgrade,
+        setIdGroup,
+      }}
     >
       {children}
     </UserstackContext.Provider>
