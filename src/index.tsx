@@ -35,6 +35,7 @@ type UserstackContextType = {
     cancelUrl: string
   ) => Promise<void>;
   setIdGroup: (groupId: string) => Promise<void>;
+  summary: () => Promise<void>;
 };
 
 const UserstackContext = createContext<UserstackContextType>(
@@ -192,6 +193,23 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
     }
   };
 
+  const summary = async (): Promise<void> => {
+    const response = await fetch(`${API_URL}/summary`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Userstack-App-Id": appId,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    } else {
+      console.error("Failed to fetch user summary:", await response.text());
+    }
+  };
+
   useEffect(() => {
     const session = Cookies.get("_us_session");
     if (session) {
@@ -217,6 +235,7 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
         currentPlan,
         upgrade,
         setIdGroup,
+        summary,
       }}
     >
       {children}
