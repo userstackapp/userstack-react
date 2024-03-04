@@ -252,3 +252,23 @@ export const useUserstack = (): UserstackContextType => {
 };
 
 export default useUserstack;
+
+// Backend-compatible functions
+
+export const summary = async (appId: string, apiKey: string): Promise<void> => {
+  const response = await fetch(`${API_URL}/summary`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Userstack-App-Id": appId,
+      "X-Userstack-API-key": apiKey,
+    },
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    return data;
+  } else {
+    console.error("Failed to fetch user summary:", await response.text());
+  }
+};
