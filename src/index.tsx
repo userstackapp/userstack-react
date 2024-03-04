@@ -261,7 +261,7 @@ export const summary = async (appId: string, apiKey: string): Promise<void> => {
     headers: {
       "Content-Type": "application/json",
       "X-Userstack-App-Id": appId,
-      "X-Userstack-API-key": apiKey,
+      Authorization: `Basic ${apiKey}`,
     },
   });
 
