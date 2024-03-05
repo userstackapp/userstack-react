@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
 
-const API_URL = "https://api.userstack.app/alpha";
+const API_URL = "https://api.userstack.app/alpha2";
 const DATA_TTL = 120000; // 2 minutes
 
 interface UserstackProviderProps {
@@ -107,6 +107,9 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
         ...sessionData,
       };
       console.log("Userstack session refreshed:", cookie);
+      setSessionId(cookie.sessionId);
+      setCurrentPlan(cookie.plan);
+      setFlags(cookie.flags);
       Cookies.set(`_us_session`, JSON.stringify(cookie), {
         expires: 36500, // 100 years should be enough
       });
@@ -127,8 +130,6 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
     successUrl: string,
     cancelUrl: string
   ): Promise<void> => {
-    console.log(sessionId, planId);
-
     if (!sessionId || sessionId === "") {
       console.error("Userstack error: No session ID found");
       return;
@@ -185,6 +186,9 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
         ...sessionData,
       };
       console.log("Userstack group changed:", cookie);
+      setSessionId(cookie.sessionId);
+      setCurrentPlan(cookie.plan);
+      setFlags(cookie.flags);
       Cookies.set(`_us_session`, JSON.stringify(cookie), {
         expires: 36500, // 100 years should be enough
       });
@@ -212,6 +216,7 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
 
   useEffect(() => {
     const session = Cookies.get("_us_session");
+
     if (session) {
       const sessionData: SessionData = JSON.parse(session);
       const now = Date.now();
