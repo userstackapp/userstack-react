@@ -1,6 +1,6 @@
 {
   "name": "@userstack/react",
-  "version": "0.0.20",
+  "version": "0.1.1",
   "description": "React client library for Userstack",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,5 +27,16 @@
   },
   "dependencies": {
     "js-cookie": "^3.0.5"
+  },
+  "prettier": {
+    "trailingComma": "all",
+    "tabWidth": 2,
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "jsxSingleQuote": false,
+    "jsxBracketSameLine": false,
+    "bracketSpacing": true,
+    "arrowParens": "always"
   }
 }
