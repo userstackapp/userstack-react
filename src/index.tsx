@@ -226,9 +226,13 @@ export function readSessionFromCookie(cookieString: string | undefined) {
     return null;
   }
 
-  const match = cookieString.match(/_us_session=([^;]*)/);
-  const value = match ? match[1] : '';
-  const json = decodeURIComponent(value || '');
-  const data = JSON.parse(json);
-  return data;
+  try {
+    const match = cookieString.match(/_us_session=([^;]*)/);
+    const value = match ? match[1] : '';
+    const json = decodeURIComponent(value || '');
+    const data = JSON.parse(json);
+    return data;
+  } catch (e) {
+    return null;
+  }
 }
