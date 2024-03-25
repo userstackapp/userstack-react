@@ -236,3 +236,30 @@ export function readSessionFromCookie(cookieString: string | undefined) {
     return null;
   }
 }
+
+export const verifySession = async (
+  apiKey: string,
+  appId: string,
+  sessionId: string,
+  apiUrl?: string,
+) => {
+  const url = apiUrl || DEFAULT_API_URL;
+
+  const result = await fetch(`${url}/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${apiKey}`,
+      'X-Userstack-App-Id': appId,
+    },
+    body: JSON.stringify({
+      sessionId,
+    }),
+  });
+
+  if (result.ok) {
+    return await result.json();
+  } else {
+    throw new Error('Failed to verify session: ' + (await result.text()));
+  }
+};
