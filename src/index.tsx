@@ -7,7 +7,7 @@ const DATA_TTL = 60 * 1000; // 1 minute
 interface UserstackProviderProps {
   children: React.ReactNode;
   appId: string;
-  customApiUrl: string;
+  customApiUrl?: string;
 }
 
 interface IdentifyConfig {
@@ -91,6 +91,9 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
       Cookies.set('_us_session', JSON.stringify(cookie), {
         expires: calculateCookieExpiry(config.ttl),
       });
+      setSessionId(cookie.sessionId);
+      setCurrentPackage(cookie.pkgId);
+      setFlags(cookie.flags);
     } else {
       console.error('Failed to identify user');
     }
@@ -215,3 +218,17 @@ export const useUserstack = (): UserstackContextType => {
 };
 
 export default useUserstack;
+
+// backend methods
+
+export function readSessionFromCookie(cookieString: string | undefined) {
+  if (!cookieString) {
+    return null;
+  }
+
+  const match = cookieString.match(/_us_session=([^;]*)/);
+  const value = match ? match[1] : '';
+  const json = decodeURIComponent(value || '');
+  const data = JSON.parse(json);
+  return data;
+}
