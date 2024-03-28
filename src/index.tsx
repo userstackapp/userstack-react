@@ -14,6 +14,7 @@ interface IdentifyConfig {
   ttl?: number;
   groupId?: string;
   groupName?: string;
+  blockFree?: boolean;
   data?: any;
 }
 
@@ -95,7 +96,9 @@ export const UserstackProvider: React.FC<UserstackProviderProps> = ({
       setCurrentPackage(cookie.pkgId);
       setFlags(cookie.flags);
     } else {
-      console.error('Failed to identify user');
+      const responseText = await response.text();
+      console.error('Failed to identify user', responseText);
+      throw new Error(responseText);
     }
   };
 
